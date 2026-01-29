@@ -1,0 +1,44 @@
+Lab 3 - IR Remote Control Texting Over UART
+============================================
+
+CC3200 LaunchPad to SSD1351 OLED Display (SPI)
+----------------------------------------------
+OLED Pin        CC3200 Pin      Function
+--------        ----------      --------
+GND             GND             Ground
+Vin             3.3V            Power
+OLEDCS          PIN_62          OLED Chip Select (active low)
+RESET           PIN_18          Reset
+DC              PIN_61          Data/Command select
+SCK             PIN_05          SPI Clock
+MOSI            PIN_07          SPI Data Out
+
+
+IR Receiver Module (TSOP31336 or similar)
+-----------------------------------------
+IR Pin          CC3200 Pin      Function
+------          ----------      --------
+Vs (VCC)        3.3V            Power (through 100 ohm resistor)
+GND             GND             Ground (with 100uF capacitor to Vs)
+OUT             PIN_03          IR Signal Output -> GPIO12 (GPIOA1, bit 4)
+
+
+UART0 Debug Console
+-------------------
+UART Pin        CC3200 Pin
+--------        ----------
+TX              PIN_55
+RX              PIN_57
+
+Baud Rate: 115200
+
+
+Board-to-Board UART1 Connection
+-------------------------------
+Board 1 Pin     Board 2 Pin     Function
+-----------     -----------     --------
+PIN_58 (TX)     PIN_59 (RX)     UART1 TX -> RX
+PIN_59 (RX)     PIN_58 (TX)     UART1 RX <- TX
+GND             GND             Common Ground
+
+Baud Rate: 115200
