@@ -10,9 +10,7 @@ GEN_CMDS__FLAG :=
 ORDERED_OBJS += \
 "./Adafruit_GFX.obj" \
 "./Adafruit_OLED.obj" \
-"./i2c_if.obj" \
 "./main.obj" \
-"./oled_tests.obj" \
 "./pin_mux_config.obj" \
 "./startup_ccs.obj" \
 "./uart_if.obj" \
@@ -148,8 +146,8 @@ lab-3.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)
-	-$(RM) "Adafruit_GFX.obj" "Adafruit_OLED.obj" "i2c_if.obj" "main.obj" "oled_tests.obj" "pin_mux_config.obj" "startup_ccs.obj" "uart_if.obj" 
-	-$(RM) "Adafruit_GFX.d" "Adafruit_OLED.d" "i2c_if.d" "main.d" "oled_tests.d" "pin_mux_config.d" "startup_ccs.d" "uart_if.d" 
+	-$(RM) "Adafruit_GFX.obj" "Adafruit_OLED.obj" "main.obj" "pin_mux_config.obj" "startup_ccs.obj" "uart_if.obj" 
+	-$(RM) "Adafruit_GFX.d" "Adafruit_OLED.d" "main.d" "pin_mux_config.d" "startup_ccs.d" "uart_if.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

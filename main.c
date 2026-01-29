@@ -4,6 +4,7 @@
 #include "hw_memmap.h"
 #include "hw_common_reg.h"
 #include "hw_ints.h"
+#include "hw_nvic.h"
 #include "rom.h"
 #include "rom_map.h"
 #include "spi.h"
@@ -177,8 +178,12 @@ void main(void) {
     Report("Waiting for IR signal on PIN_03...\n\r");
 
     fillScreen(BLACK);
-    drawString(0, 0, "TX:", WHITE, BLACK, 1);
-    drawString(0, 64, "RX:", WHITE, BLACK, 1);
+    setTextColor(WHITE, BLACK);
+    setTextSize(1);
+    setCursor(0, 0);
+    Outstr("TX:");
+    setCursor(0, 64);
+    Outstr("RX:");
 
     while (1) {
         // Check for received UART data
@@ -190,7 +195,9 @@ void main(void) {
             MessageRx[i] = '\0';
             Report("RX: %s\n\r", MessageRx);
             fillRect(0, 74, 128, 20, BLACK);
-            drawString(0, 74, MessageRx, GREEN, BLACK, 1);
+            setTextColor(GREEN, BLACK);
+            setCursor(0, 74);
+            Outstr(MessageRx);
         }
 
         // Check if IR transmission complete

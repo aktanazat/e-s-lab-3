@@ -1,8 +1,6 @@
 "./Adafruit_GFX.obj"
 "./Adafruit_OLED.obj"
-"./i2c_if.obj"
 "./main.obj"
-"./oled_tests.obj"
 "./pin_mux_config.obj"
 "./startup_ccs.obj"
 "./uart_if.obj"

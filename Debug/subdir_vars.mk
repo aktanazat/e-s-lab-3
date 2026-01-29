@@ -9,9 +9,7 @@ CMD_SRCS += \
 C_SRCS += \
 ../Adafruit_GFX.c \
 ../Adafruit_OLED.c \
-../i2c_if.c \
 ../main.c \
-../oled_tests.c \
 ../pin_mux_config.c \
 /Applications/TI/lib/cc3200sdk_1.5.0/cc3200-sdk/example/common/startup_ccs.c \
 ../uart_if.c 
@@ -19,9 +17,7 @@ C_SRCS += \
 C_DEPS += \
 ./Adafruit_GFX.d \
 ./Adafruit_OLED.d \
-./i2c_if.d \
 ./main.d \
-./oled_tests.d \
 ./pin_mux_config.d \
 ./startup_ccs.d \
 ./uart_if.d 
@@ -29,9 +25,7 @@ C_DEPS += \
 OBJS += \
 ./Adafruit_GFX.obj \
 ./Adafruit_OLED.obj \
-./i2c_if.obj \
 ./main.obj \
-./oled_tests.obj \
 ./pin_mux_config.obj \
 ./startup_ccs.obj \
 ./uart_if.obj 
@@ -39,9 +33,7 @@ OBJS += \
 OBJS__QUOTED += \
 "Adafruit_GFX.obj" \
 "Adafruit_OLED.obj" \
-"i2c_if.obj" \
 "main.obj" \
-"oled_tests.obj" \
 "pin_mux_config.obj" \
 "startup_ccs.obj" \
 "uart_if.obj" 
@@ -49,9 +41,7 @@ OBJS__QUOTED += \
 C_DEPS__QUOTED += \
 "Adafruit_GFX.d" \
 "Adafruit_OLED.d" \
-"i2c_if.d" \
 "main.d" \
-"oled_tests.d" \
 "pin_mux_config.d" \
 "startup_ccs.d" \
 "uart_if.d" 
@@ -59,9 +49,7 @@ C_DEPS__QUOTED += \
 C_SRCS__QUOTED += \
 "../Adafruit_GFX.c" \
 "../Adafruit_OLED.c" \
-"../i2c_if.c" \
 "../main.c" \
-"../oled_tests.c" \
 "../pin_mux_config.c" \
 "/Applications/TI/lib/cc3200sdk_1.5.0/cc3200-sdk/example/common/startup_ccs.c" \
 "../uart_if.c" 
