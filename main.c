@@ -87,6 +87,24 @@ static void IRInit(void) {
     MAP_GPIOIntEnable(IR_GPIO_PORT, IR_GPIO_PIN);
 }
 
+static const char* getButtonName(unsigned long code) {
+    switch (code) {
+        case 0x98990000: return "0";
+        case 0x08090000: return "1";
+        case 0x88890000: return "2";
+        case 0x48490000: return "3";
+        case 0xC8C90000: return "4";
+        case 0x28290000: return "5";
+        case 0xA8A90000: return "6";
+        case 0x68690000: return "7";
+        case 0xE8E90000: return "8";
+        case 0x18190000: return "9";
+        case 0x4C4D0000: return "MUTE";
+        case 0xECED0000: return "LAST";
+        default: return "?";
+    }
+}
+
 static void decodePulses(void) {
     if (g_pulseIdx < 40) return;
 
@@ -118,7 +136,7 @@ static void decodePulses(void) {
         bitCount++;
     }
 
-    Report("Bits: %d  Code: 0x%08lX %08lX\n\r", bitCount, decoded1, decoded2);
+    Report("%s -- CODE: 0x%08lX %08lX\n\r", getButtonName(decoded2), decoded1, decoded2);
 }
 
 void main(void) {
