@@ -7,38 +7,23 @@
 #include "hw_nvic.h"
 #include "rom.h"
 #include "rom_map.h"
-#include "spi.h"
-#include "uart.h"
 #include "interrupt.h"
 #include "pin_mux_config.h"
-#include "utils.h"
 #include "prcm.h"
 #include "gpio.h"
 #include "systick.h"
-#include <stdint.h>
-#include <string.h>
-
 #include "uart_if.h"
-#include "Adafruit_GFX.h"
-#include "Adafruit_SSD1351.h"
 
-#define SPI_IF_BIT_RATE  100000
-
-// SysTick macros from prelab
 #define SYSCLKFREQ 80000000ULL
 #define TICKS_TO_US(ticks) \
     ((((ticks) / SYSCLKFREQ) * 1000000ULL) + \
     ((((ticks) % SYSCLKFREQ) * 1000000ULL) / SYSCLKFREQ))
-#define US_TO_TICKS(us) ((SYSCLKFREQ / 1000000ULL) * (us))
 
-// SysTick reload for 100ms timeout
 #define SYSTICK_RELOAD_VAL 8000000UL
 
-// IR receiver on PIN_03 = GPIO12 = GPIOA1 bit 4
 #define IR_GPIO_PORT GPIOA1_BASE
 #define IR_GPIO_PIN  0x10
 
-// Pulse width buffer
 #define MAX_PULSES 100
 volatile unsigned long g_pulseWidths[MAX_PULSES];
 volatile int g_pulseIdx = 0;
@@ -49,34 +34,18 @@ volatile int g_systickExpired = 0;
 extern void (* const g_pfnVectors[])(void);
 #endif
 
-char MessageTx[64];
-char MessageRx[64];
-int MsgTxIdx = 0;
-
 static inline void SysTickReset(void) {
     HWREG(NVIC_ST_CURRENT) = 1;
     g_systickExpired = 0;
 }
 
 static void BoardInit(void) {
-#ifndef USE_TIRTOS
 #if defined(ccs)
     MAP_IntVTableBaseSet((unsigned long)&g_pfnVectors[0]);
-#endif
 #endif
     MAP_IntMasterEnable();
     MAP_IntEnable(FAULT_SYSTICK);
     PRCMCC3200MCUInit();
-}
-
-static void SPIInit(void) {
-    MAP_SPIReset(GSPI_BASE);
-    MAP_SPIFIFOEnable(GSPI_BASE, SPI_TX_FIFO | SPI_RX_FIFO);
-    MAP_SPIConfigSetExpClk(GSPI_BASE, MAP_PRCMPeripheralClockGet(PRCM_GSPI),
-                     SPI_IF_BIT_RATE, SPI_MODE_MASTER, SPI_SUB_MODE_0,
-                     (SPI_SW_CTRL_CS | SPI_4PIN_MODE | SPI_TURBO_OFF |
-                      SPI_CS_ACTIVELOW | SPI_WL_8));
-    MAP_SPIEnable(GSPI_BASE);
 }
 
 static void SysTickHandler(void) {
@@ -95,6 +64,10 @@ static void GPIOIntHandler(void) {
         unsigned long pulseWidth = TICKS_TO_US(SYSTICK_RELOAD_VAL - tickVal);
 
         if (g_pulseIdx < MAX_PULSES && !g_systickExpired) {
+            if (g_pulseIdx > 50 && pulseWidth > 10000) {
+                g_pulseReady = 1;
+                return;
+            }
             g_pulseWidths[g_pulseIdx++] = pulseWidth;
         }
         SysTickReset();
@@ -109,102 +82,58 @@ static void IRInit(void) {
 
     MAP_GPIOIntRegister(IR_GPIO_PORT, GPIOIntHandler);
     MAP_GPIOIntTypeSet(IR_GPIO_PORT, IR_GPIO_PIN, GPIO_BOTH_EDGES);
-    unsigned long ulStatus = MAP_GPIOIntStatus(IR_GPIO_PORT, false);
-    MAP_GPIOIntClear(IR_GPIO_PORT, ulStatus);
+    MAP_GPIOIntClear(IR_GPIO_PORT, MAP_GPIOIntStatus(IR_GPIO_PORT, false));
     MAP_IntEnable(INT_GPIOA1);
     MAP_GPIOIntEnable(IR_GPIO_PORT, IR_GPIO_PIN);
 }
 
-static void UART1Init(void) {
-    MAP_UARTConfigSetExpClk(UARTA1_BASE, MAP_PRCMPeripheralClockGet(PRCM_UARTA1),
-                UART_BAUD_RATE, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |
-                UART_CONFIG_PAR_NONE));
-    MAP_UARTEnable(UARTA1_BASE);
-}
+static void decodePulses(void) {
+    if (g_pulseIdx < 40) return;
 
-static void sendMessage(char *str, int len) {
     int i;
-    for (i = 0; i < len; i++) {
-        MAP_UARTCharPut(UARTA1_BASE, str[i]);
-    }
-    MAP_UARTCharPut(UARTA1_BASE, '\n');
-}
+    int startIdx = 0;
 
-// Decode pulse widths to determine button pressed
-// Returns: 0-9 for digits, 10=DELETE, 11=MUTE, -1=unknown
-static int decodePulses(void) {
-    if (g_pulseIdx < 10) return -1;
-
-    // Build bit pattern from pulse widths
-    // Typical IR: short pulse (~500-600us) = 0, long pulse (~1600-1700us) = 1
-    unsigned long decoded = 0;
-    int bitCount = 0;
-    int i;
-
-    Report("Pulses captured: %d\n\r", g_pulseIdx);
-    for (i = 0; i < g_pulseIdx && i < 20; i++) {
-        Report("  [%d]: %lu us\n\r", i, g_pulseWidths[i]);
-    }
-
-    // Skip leader pulse, decode data pulses
-    for (i = 2; i < g_pulseIdx && bitCount < 32; i++) {
-        unsigned long pw = g_pulseWidths[i];
-        if (pw > 300 && pw < 5000) {
-            if (pw > 1000) {
-                decoded |= (1UL << (31 - bitCount));
-            }
-            bitCount++;
+    for (i = 0; i < g_pulseIdx - 1; i++) {
+        if (g_pulseWidths[i] > 3000 && g_pulseWidths[i] < 4000 &&
+            g_pulseWidths[i+1] > 1400 && g_pulseWidths[i+1] < 1800) {
+            startIdx = i + 2;
+            break;
         }
     }
 
-    Report("Decoded: 0x%08lX (%d bits)\n\r", decoded, bitCount);
-    return -1;  // Return -1 for now, will map after capturing patterns
+    if (startIdx == 0) return;
+
+    unsigned long decoded1 = 0;
+    unsigned long decoded2 = 0;
+    int bitCount = 0;
+
+    for (i = startIdx; i + 1 < g_pulseIdx && bitCount < 48; i += 2) {
+        unsigned long space = g_pulseWidths[i + 1];
+        int bit = (space > 800) ? 1 : 0;
+        if (bitCount < 32) {
+            if (bit) decoded1 |= (1UL << (31 - bitCount));
+        } else {
+            if (bit) decoded2 |= (1UL << (31 - (bitCount - 32)));
+        }
+        bitCount++;
+    }
+
+    Report("Bits: %d  Code: 0x%08lX %08lX\n\r", bitCount, decoded1, decoded2);
 }
 
 void main(void) {
-    memset(MessageTx, 0, sizeof(MessageTx));
-    memset(MessageRx, 0, sizeof(MessageRx));
-
     BoardInit();
     PinMuxConfig();
-    SPIInit();
-    Adafruit_Init();
     InitTerm();
     ClearTerm();
-    UART1Init();
     IRInit();
 
     Report("Lab 3 - IR Remote (TV Code 1003)\n\r");
-    Report("Waiting for IR signal on PIN_03...\n\r");
-
-    fillScreen(BLACK);
-    setTextColor(WHITE, BLACK);
-    setTextSize(1);
-    setCursor(0, 0);
-    Outstr("TX:");
-    setCursor(0, 64);
-    Outstr("RX:");
+    Report("Press buttons to capture codes...\n\r");
 
     while (1) {
-        // Check for received UART data
-        if (MAP_UARTCharsAvail(UARTA1_BASE)) {
-            int i = 0;
-            while (MAP_UARTCharsAvail(UARTA1_BASE) && i < 63) {
-                MessageRx[i++] = MAP_UARTCharGet(UARTA1_BASE);
-            }
-            MessageRx[i] = '\0';
-            Report("RX: %s\n\r", MessageRx);
-            fillRect(0, 74, 128, 20, BLACK);
-            setTextColor(GREEN, BLACK);
-            setCursor(0, 74);
-            Outstr(MessageRx);
-        }
-
-        // Check if IR transmission complete
         if (g_pulseReady) {
-            int button = decodePulses();
-
-            // Reset for next transmission
+            decodePulses();
             g_pulseIdx = 0;
             g_pulseReady = 0;
             g_systickExpired = 0;
